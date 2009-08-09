@@ -2,5 +2,5 @@
 <resources>
     <string name="hello">Hello World, PowerTool!</string>
     <string name="app_name">PowerTool</string>
-<string name="test">This is a test</string>
+<string name="set_time_failed">Could not set new time schedule</string>
 </resources>
