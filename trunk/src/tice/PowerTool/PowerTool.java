@@ -1,10 +1,7 @@
 package tice.PowerTool;
 
-import java.util.Date;
 import android.app.Activity;
 import android.app.AlarmManager;
-import android.app.PendingIntent;
-import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.view.View;
@@ -12,7 +9,7 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.TimePicker;
-import android.widget.Toast;
+
 
 
 public class PowerTool extends Activity {
@@ -41,7 +38,10 @@ public class PowerTool extends Activity {
         	mRowId = timesCursor.getInt( timesCursor.getColumnIndexOrThrow(DBAdapter.KEY_ROWID));
         	hour = timesCursor.getInt( timesCursor.getColumnIndexOrThrow(DBAdapter.KEY_HOUR));
         	minute = timesCursor.getInt( timesCursor.getColumnIndexOrThrow(DBAdapter.KEY_MINUTE));
-        	SetPoweroffSchedule(hour,minute);
+        	
+            AlarmManager am = (AlarmManager)getSystemService(ALARM_SERVICE);
+            Shutdown st = new Shutdown(this,am);
+        	st.SetPoweroffSchedule(hour,minute);
         }
         
         mTimeDisplay = (TextView) findViewById(R.id.TextView);   
@@ -64,7 +64,19 @@ public class PowerTool extends Activity {
     private OnClickListener mSetSchedule = new OnClickListener() {
         public void onClick(View v) {
             TimePicker timePicker = (TimePicker) findViewById(R.id.TimePicker);
-            SetPoweroffSchedule(timePicker.getCurrentHour(),timePicker.getCurrentMinute());
+            
+            int hour = timePicker.getCurrentHour();
+            int minute = timePicker.getCurrentMinute();
+            
+            AlarmManager am = (AlarmManager)getSystemService(ALARM_SERVICE);
+            Shutdown st = new Shutdown(PowerTool.this,am);
+            st.SetPoweroffSchedule(hour,minute);
+    		
+            if(mRowId == -1){
+    			mDbHelper.createTime(hour, minute);
+    		}else {
+    			mDbHelper.updateTime(mRowId, hour, minute);
+    		}
         }
     };
 
@@ -81,7 +93,8 @@ public class PowerTool extends Activity {
         else
             return "0" + String.valueOf(c);
     }
-
+    
+/*
     private void SetPoweroffSchedule(int hour, int minute){
     	
         Date now = new Date();
@@ -96,22 +109,18 @@ public class PowerTool extends Activity {
         	if( scheduledate.getMinutes() - now.getMinutes() <= 0 ){
         		scheduledate.setDate(now.getDate() + 1);
         	}
-        } 	
+        }
         
         Intent intent = new Intent(PowerTool.this, PowerToolService.class);
         PendingIntent sender = PendingIntent.getBroadcast(PowerTool.this, 0, intent, 0);
         
         AlarmManager am = (AlarmManager)getSystemService(ALARM_SERVICE);
-        am.setRepeating(AlarmManager.RTC_WAKEUP, scheduledate.getTime() , 6000 , sender);
-        //am.set(AlarmManager.RTC_WAKEUP, scheduledate.getTime() , sender);
+        //am.setRepeating(AlarmManager.RTC_WAKEUP, scheduledate.getTime() , 6000 , sender);
+        am.cancel(sender);
+        am.set(AlarmManager.RTC_WAKEUP, scheduledate.getTime() , sender);
         
     	String text = String.format("The service will be started in %.1f minutes", (scheduledate.getTime() - now.getTime()) / 60000.0);
 		Toast.makeText(PowerTool.this, text.subSequence(0, text.length()), Toast.LENGTH_LONG).show();
-        
-		if(mRowId == -1){
-			mDbHelper.createTime(hour, minute);
-		}else {
-			mDbHelper.updateTime(mRowId, hour, minute);
-		}
-    }  
+    }
+*/    
 }
