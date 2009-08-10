@@ -1,59 +1,56 @@
 package tice.PowerTool;
 
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.Serializable;
 import java.util.Date;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-
 import android.app.Activity;
-import android.app.NotificationManager;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.Intent;
+import android.database.Cursor;
 import android.os.Bundle;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
 
-class PowerToolState implements Serializable{
-	private static final long serialVersionUID = 1L;
-	public ScheduledFuture<?> mServicesHandle;
-
-    public PowerToolState(ScheduledFuture<?> handle){
-        this.mServicesHandle = handle;
-    }
-} 
 
 public class PowerTool extends Activity {
 	
 	private TextView mTimeDisplay;
-	NotificationManager mNM;
-	ScheduledFuture<?> mServicesHandle;
-	ScheduledExecutorService mService;
-	private static final String TAG = "PowerTool";
-	
+    private DBAdapter mDbHelper;
+    private int mRowId;
+    
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
       
-        mTimeDisplay = (TextView) findViewById(R.id.TextView);
-        mNM  = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+        mDbHelper = new DBAdapter(this);
+        mDbHelper.open();
+        mRowId = -1;
+       
+        int hour = 02;
+        int minute = 00;
         
-        if (savedInstanceState == null){
-        	mServicesHandle = null;
-        } else {
-        	PowerToolState s = (PowerToolState)savedInstanceState.getSerializable(TAG);
-        	mServicesHandle = s.mServicesHandle;
+        Cursor timesCursor = mDbHelper.fetchAllTimes();
+        //startManagingCursor(timesCursor);
+        if (timesCursor.getCount() != 0){
+        	timesCursor.moveToFirst();
+        	mRowId = timesCursor.getInt( timesCursor.getColumnIndexOrThrow(DBAdapter.KEY_ROWID));
+        	hour = timesCursor.getInt( timesCursor.getColumnIndexOrThrow(DBAdapter.KEY_HOUR));
+        	minute = timesCursor.getInt( timesCursor.getColumnIndexOrThrow(DBAdapter.KEY_MINUTE));
+        	SetPoweroffSchedule(hour,minute);
         }
+        
+        mTimeDisplay = (TextView) findViewById(R.id.TextView);   
 
         TimePicker timePicker = (TimePicker) findViewById(R.id.TimePicker);
         timePicker.setIs24HourView(true);
+        timePicker.setCurrentHour(hour);
+        timePicker.setCurrentMinute(minute);
+        
         timePicker.setOnTimeChangedListener(new TimePicker.OnTimeChangedListener() {
             public void onTimeChanged(TimePicker view, int hourOfDay, int minute) {
                 updateDisplay(hourOfDay, minute);
@@ -61,18 +58,15 @@ public class PowerTool extends Activity {
         });
         
         Button btnOK = (Button) findViewById(R.id.btnOK); 
-        btnOK.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-            	StartServices();
-            }
-        }); 
+        btnOK.setOnClickListener(mSetSchedule); 
     }
- 
-    @Override
-	protected void onDestroy() {
-		// TODO Auto-generated method stub
-		super.onDestroy();
-	}
+
+    private OnClickListener mSetSchedule = new OnClickListener() {
+        public void onClick(View v) {
+            TimePicker timePicker = (TimePicker) findViewById(R.id.TimePicker);
+            SetPoweroffSchedule(timePicker.getCurrentHour(),timePicker.getCurrentMinute());
+        }
+    };
 
 	private void updateDisplay(int hourOfDay, int minute) {
         mTimeDisplay.setText(
@@ -87,29 +81,14 @@ public class PowerTool extends Activity {
         else
             return "0" + String.valueOf(c);
     }
-    
-    private void StartServices(){
 
-    	if (mServicesHandle != null){
-    		if (mServicesHandle.cancel(true) == false){
-    			Toast.makeText(PowerTool.this, R.string.set_time_failed, Toast.LENGTH_LONG).show();
-    		}
-    	}
+    private void SetPoweroffSchedule(int hour, int minute){
     	
-    	mService = Executors.newScheduledThreadPool(1);
-    	
-    	Runnable task = new Runnable(){
-             public void run() {
-            	 ExecUnixCommand("reboot -p\n");
-             }
-        };
-        
         Date now = new Date();
         Date scheduledate = new Date();
-        TimePicker timePicker = (TimePicker) findViewById(R.id.TimePicker);
    
-        scheduledate.setHours(timePicker.getCurrentHour());
-        scheduledate.setMinutes(timePicker.getCurrentMinute());
+        scheduledate.setHours(hour);
+        scheduledate.setMinutes(minute);
 
         if( scheduledate.getHours() - now.getHours() < 0 ){
         	scheduledate.setDate(now.getDate() + 1);
@@ -117,48 +96,22 @@ public class PowerTool extends Activity {
         	if( scheduledate.getMinutes() - now.getMinutes() <= 0 ){
         		scheduledate.setDate(now.getDate() + 1);
         	}
-        }
-
-        long time = (scheduledate.getTime() - System.currentTimeMillis()) / 1000;
+        } 	
         
-        mServicesHandle = mService.schedule(task, time,  TimeUnit.SECONDS); 
+        Intent intent = new Intent(PowerTool.this, PowerToolService.class);
+        PendingIntent sender = PendingIntent.getBroadcast(PowerTool.this, 0, intent, 0);
         
-        if(mServicesHandle == null){
-			Toast.makeText(PowerTool.this, R.string.set_time_failed, Toast.LENGTH_LONG).show();
-        } else {
-        	String text = String.format("The service will be started in %.1f minutes", time / 60.0);
-			Toast.makeText(PowerTool.this, text.subSequence(0, text.length()), Toast.LENGTH_LONG).show();
-        }
-    }
-    
-    private void ExecUnixCommand(String cmdstr){
-    	try{
-    		Process process = Runtime.getRuntime().exec("su");
-    		DataOutputStream os = new DataOutputStream(process.getOutputStream());
-    		os.writeBytes(cmdstr);
-    		os.writeBytes("exit\n");
-    		os.flush();
-    	} catch (IOException e) {
-    	// TODO Auto-generated catch block
-    	}
-    }
-
-	@Override
-	protected void onPause() {
-		// TODO Auto-generated method stub
-		super.onPause();
-	}
-
-	@Override
-	protected void onResume() {
-		// TODO Auto-generated method stub
-		super.onResume();
-	}
-
-	@Override
-	protected void onSaveInstanceState(Bundle outState) {
-		// TODO Auto-generated method stub
-		super.onSaveInstanceState(outState);
-//		outState.putSerializable(TAG, new PowerToolState(mServicesHandle));
-	}
+        AlarmManager am = (AlarmManager)getSystemService(ALARM_SERVICE);
+        am.setRepeating(AlarmManager.RTC_WAKEUP, scheduledate.getTime() , 6000 , sender);
+        //am.set(AlarmManager.RTC_WAKEUP, scheduledate.getTime() , sender);
+        
+    	String text = String.format("The service will be started in %.1f minutes", (scheduledate.getTime() - now.getTime()) / 60000.0);
+		Toast.makeText(PowerTool.this, text.subSequence(0, text.length()), Toast.LENGTH_LONG).show();
+        
+		if(mRowId == -1){
+			mDbHelper.createTime(hour, minute);
+		}else {
+			mDbHelper.updateTime(mRowId, hour, minute);
+		}
+    }  
 }
