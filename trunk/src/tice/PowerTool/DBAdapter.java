@@ -10,97 +10,95 @@ import android.util.Log;
 
 public class DBAdapter {
 
-    public static final String KEY_HOUR = "Hour";
-    public static final String KEY_MINUTE = "Minute";
-    public static final String KEY_ROWID = "_id";
+	public static final String KEY_HOUR = "Hour";
+	public static final String KEY_MINUTE = "Minute";
+	public static final String KEY_ROWID = "_id";
 
-    private static final String TAG = "DBAdapter";
-    private DatabaseHelper mDbHelper;
-    private SQLiteDatabase mDb;
+	private static final String TAG = "DBAdapter";
+	private DatabaseHelper mDbHelper;
+	private SQLiteDatabase mDb;
 
-    private static final String DATABASE_CREATE =
-            "create table times (_id integer primary key autoincrement, "
-                    + "Hour integer not null, Minute integer not null);";
+	private static final String DATABASE_CREATE = "create table times (_id integer primary key autoincrement, "
+			+ "Hour integer not null, Minute integer not null);";
 
-    private static final String DATABASE_NAME = "data";
-    private static final String DATABASE_TABLE = "times";
-    private static final int DATABASE_VERSION = 2;
+	private static final String DATABASE_NAME = "data";
+	private static final String DATABASE_TABLE = "times";
+	private static final int DATABASE_VERSION = 2;
 
-    private final Context mCtx;
+	private final Context mCtx;
 
-    private static class DatabaseHelper extends SQLiteOpenHelper {
+	private static class DatabaseHelper extends SQLiteOpenHelper {
 
-        DatabaseHelper(Context context) {
-            super(context, DATABASE_NAME, null, DATABASE_VERSION);
-        }
+		DatabaseHelper(Context context) {
+			super(context, DATABASE_NAME, null, DATABASE_VERSION);
+		}
 
-        @Override
-        public void onCreate(SQLiteDatabase db) {
+		@Override
+		public void onCreate(SQLiteDatabase db) {
 
-            db.execSQL(DATABASE_CREATE);
-        }
+			db.execSQL(DATABASE_CREATE);
+		}
 
-        @Override
-        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-            Log.w(TAG, "Upgrading database from version " + oldVersion + " to "
-                    + newVersion + ", which will destroy all old data");
-            db.execSQL("DROP TABLE IF EXISTS times");
-            onCreate(db);
-        }
-    }
+		@Override
+		public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+			Log.w(TAG, "Upgrading database from version " + oldVersion + " to "
+					+ newVersion + ", which will destroy all old data");
+			db.execSQL("DROP TABLE IF EXISTS times");
+			onCreate(db);
+		}
+	}
 
-    public DBAdapter(Context ctx) {
-        this.mCtx = ctx;
-    }
+	public DBAdapter(Context ctx) {
+		this.mCtx = ctx;
+	}
 
-    public DBAdapter open() throws SQLException {
-        mDbHelper = new DatabaseHelper(mCtx);
-        mDb = mDbHelper.getWritableDatabase();
-        return this;
-    }
-    
-    public void close() {
-        mDbHelper.close();
-    }
+	public DBAdapter open() throws SQLException {
+		mDbHelper = new DatabaseHelper(mCtx);
+		mDb = mDbHelper.getWritableDatabase();
+		return this;
+	}
 
-    public long createTime(int hour, int minute) {
-        ContentValues initialValues = new ContentValues();
-        initialValues.put(KEY_HOUR, hour);
-        initialValues.put(KEY_MINUTE, minute);
-        return mDb.insert(DATABASE_TABLE, null, initialValues);
-    }
+	public void close() {
+		mDbHelper.close();
+	}
 
-    public boolean deleteTime(long rowId) {
+	public long createTime(int hour, int minute) {
+		ContentValues initialValues = new ContentValues();
+		initialValues.put(KEY_HOUR, hour);
+		initialValues.put(KEY_MINUTE, minute);
+		return mDb.insert(DATABASE_TABLE, null, initialValues);
+	}
 
-        return mDb.delete(DATABASE_TABLE, KEY_ROWID + "=" + rowId, null) > 0;
-    }
+	public boolean deleteTime(long rowId) {
 
-    public Cursor fetchTime(long rowId) throws SQLException {
+		return mDb.delete(DATABASE_TABLE, KEY_ROWID + "=" + rowId, null) > 0;
+	}
 
-        Cursor mCursor =
+	public Cursor fetchTime(long rowId) throws SQLException {
 
-                mDb.query(true, DATABASE_TABLE, new String[] {KEY_ROWID,
-                        KEY_HOUR, KEY_MINUTE}, KEY_ROWID + "=" + rowId, null,
-                        null, null, null, null);
-        if (mCursor != null) {
-            mCursor.moveToFirst();
-        }
-        return mCursor;
+		Cursor mCursor =
 
-    }
+		mDb.query(true, DATABASE_TABLE, new String[] { KEY_ROWID, KEY_HOUR,
+				KEY_MINUTE }, KEY_ROWID + "=" + rowId, null, null, null, null,
+				null);
+		if (mCursor != null) {
+			mCursor.moveToFirst();
+		}
+		return mCursor;
 
-    public Cursor fetchAllTimes() {
+	}
 
-        return mDb.query(DATABASE_TABLE, new String[] {KEY_ROWID, KEY_HOUR,
-                KEY_MINUTE}, null, null, null, null, null);
-    }
-    
+	public Cursor fetchAllTimes() {
 
-    public boolean updateTime(long rowId, int hour, int minute) {
-        ContentValues args = new ContentValues();
-        args.put(KEY_HOUR, hour);
-        args.put(KEY_MINUTE, minute);
+		return mDb.query(DATABASE_TABLE, new String[] { KEY_ROWID, KEY_HOUR,
+				KEY_MINUTE }, null, null, null, null, null);
+	}
 
-        return mDb.update(DATABASE_TABLE, args, KEY_ROWID + "=" + rowId, null) > 0;
-    }   
+	public boolean updateTime(long rowId, int hour, int minute) {
+		ContentValues args = new ContentValues();
+		args.put(KEY_HOUR, hour);
+		args.put(KEY_MINUTE, minute);
+
+		return mDb.update(DATABASE_TABLE, args, KEY_ROWID + "=" + rowId, null) > 0;
+	}
 }
