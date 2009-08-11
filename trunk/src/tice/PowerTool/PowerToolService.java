@@ -11,13 +11,13 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
-import android.util.Log;
+import android.os.PowerManager;
 import android.widget.Toast;
 
 public class PowerToolService extends BroadcastReceiver {
 
 	static final String ACTION = "android.intent.action.BOOT_COMPLETED";
-
+	static PowerManager.WakeLock sWakeLock;
 	@Override
 	public void onReceive(Context context, Intent intent) {
 		String action = intent.getAction();
@@ -34,13 +34,23 @@ public class PowerToolService extends BroadcastReceiver {
 					int minute = timesCursor.getInt(timesCursor.getColumnIndexOrThrow(DBAdapter.KEY_MINUTE));
 					timesCursor.close();	
 					
-					AlarmManager am = (AlarmManager) context.getSystemService(context.ALARM_SERVICE);
+					AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
 					Shutdown st = new Shutdown(context, am);
 					st.SetPoweroffSchedule(hour, minute);
 				}
 //				Toast.makeText(context, "AutoStart service has started!", Toast.LENGTH_LONG).show();
 			}
 		} else {
+	        if (sWakeLock != null) {
+	            sWakeLock.release();
+	        }
+
+			PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+			sWakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK |
+	                PowerManager.ACQUIRE_CAUSES_WAKEUP |
+	                PowerManager.ON_AFTER_RELEASE, "PowerToolService");
+			sWakeLock.acquire();
+
 			String text = String.format("The service is started");
 			Toast.makeText(context, text.subSequence(0, text.length()), Toast.LENGTH_LONG).show();
 	        Thread thr = new Thread(null, mTask, "PowerToolService");
@@ -50,12 +60,18 @@ public class PowerToolService extends BroadcastReceiver {
 
     Runnable mTask = new Runnable() {
         public void run() {
-            long endTime = System.currentTimeMillis() + 15*1000;
+            long endTime = System.currentTimeMillis() + 3*1000;
             while (System.currentTimeMillis() < endTime) {
             	try{
             		wait(endTime - System.currentTimeMillis());
             	}catch (Exception e) {;}
             }
+            
+	        //if (sWakeLock != null) {
+	        //	sWakeLock.release();
+	        //	sWakeLock = null;
+	        //}
+	        
             ExecUnixCommand("/system/bin/toolbox reboot -p");
         }
     };	
