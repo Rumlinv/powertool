@@ -25,6 +25,7 @@ public class Shutdown {
 
 		scheduledate.setHours(hour);
 		scheduledate.setMinutes(minute);
+		scheduledate.setSeconds(0);
 
 		if (scheduledate.getHours() - now.getHours() < 0) {
 			scheduledate.setDate(now.getDate() + 1);
@@ -41,7 +42,16 @@ public class Shutdown {
 		mArm.set(AlarmManager.RTC_WAKEUP, scheduledate.getTime(), sender);
 		//mArm.setRepeating(AlarmManager.RTC_WAKEUP, scheduledate.getTime() ,  6000 , sender);
 		
-		String text = String.format("The service will be started in %.1f minutes", (scheduledate.getTime() - now.getTime()) / 60000.0);
+		String text;
+		double time = (scheduledate.getTime() - now.getTime()) / 1000.0;
+		if( time < 60){
+			text = String.format("PowerOff will start in %.1f seconds", time);
+		} else if ( time < 3600 ){
+			text = String.format("PowerOff will start in %.1f minutes", time / 60);
+		} else {
+			text = String.format("PowerOff will start in %.1f hours", time / 3600);
+		}
+		
 		Toast.makeText(mCtx, text.subSequence(0, text.length()),Toast.LENGTH_LONG).show();
 	}
 }

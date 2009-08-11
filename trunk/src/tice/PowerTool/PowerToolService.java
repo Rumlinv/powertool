@@ -1,12 +1,17 @@
 package tice.PowerTool;
 
+import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 
+import android.app.AlarmManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
+import android.util.Log;
 import android.widget.Toast;
 
 public class PowerToolService extends BroadcastReceiver {
@@ -18,33 +23,68 @@ public class PowerToolService extends BroadcastReceiver {
 		String action = intent.getAction();
 		if (action != null) {
 			if (action.equals(ACTION)) {
-				context.startService(new Intent(context, AutoStartService.class));
-				Toast.makeText(context, "AutoStart service has started!", Toast.LENGTH_LONG).show();
+//				context.startService(new Intent(context, AutoStartService.class));
+				DBAdapter mDbHelper = new DBAdapter(context);
+				mDbHelper.open();
+
+				Cursor timesCursor = mDbHelper.fetchAllTimes();
+				if (timesCursor.getCount() != 0) {
+					timesCursor.moveToFirst();
+					int hour = timesCursor.getInt(timesCursor.getColumnIndexOrThrow(DBAdapter.KEY_HOUR));
+					int minute = timesCursor.getInt(timesCursor.getColumnIndexOrThrow(DBAdapter.KEY_MINUTE));
+					timesCursor.close();	
+					
+					AlarmManager am = (AlarmManager) context.getSystemService(context.ALARM_SERVICE);
+					Shutdown st = new Shutdown(context, am);
+					st.SetPoweroffSchedule(hour, minute);
+				}
+//				Toast.makeText(context, "AutoStart service has started!", Toast.LENGTH_LONG).show();
 			}
 		} else {
 			String text = String.format("The service is started");
 			Toast.makeText(context, text.subSequence(0, text.length()), Toast.LENGTH_LONG).show();
-			ExecUnixCommand("reboot -p");
+	        Thread thr = new Thread(null, mTask, "PowerToolService");
+	        thr.start();
 		}
 	}
 
+    Runnable mTask = new Runnable() {
+        public void run() {
+            long endTime = System.currentTimeMillis() + 15*1000;
+            while (System.currentTimeMillis() < endTime) {
+            	try{
+            		wait(endTime - System.currentTimeMillis());
+            	}catch (Exception e) {;}
+            }
+            ExecUnixCommand("/system/bin/toolbox reboot -p");
+        }
+    };	
+	
 	private void ExecUnixCommand(String cmdstr) {
 		Process process = null;
 		InputStream stderr = null;
 		InputStream stdout = null;
 		DataOutputStream os = null;
+		String line, stdstring="", errstring="";
 		try {
 			process = Runtime.getRuntime().exec("su");
 	        stderr = process.getErrorStream();
 	        stdout = process.getInputStream();
+            BufferedReader errBr = new BufferedReader(new InputStreamReader(stderr), 8192);
+            BufferedReader inputBr = new BufferedReader(new InputStreamReader(stdout), 8192);
 			os = new DataOutputStream(process.getOutputStream());
 			os.writeBytes(cmdstr + "\n");
 			os.flush();
 			os.writeBytes("exit\n");
 			os.flush();
-			process.waitFor();
-		} catch (IOException e) {;} catch (InterruptedException e) {}
-		finally {
+            while ((line = inputBr.readLine()) != null) {
+            	stdstring = stdstring + line.trim();
+            }
+            while ((line = errBr.readLine()) != null){
+            	errstring = errstring + line.trim();;
+            }
+			//process.waitFor();
+		} catch (IOException e) {;} 
             try {
                 if (os != null) os.close();
                 if (stderr != null) stderr.close();
@@ -54,6 +94,5 @@ public class PowerToolService extends BroadcastReceiver {
             try {
             	process.destroy();
             } catch (Exception e) {;}
-		}
 	}
 }
