@@ -33,12 +33,9 @@ public class PowerTool extends Activity {
 		// startManagingCursor(timesCursor);
 		if (timesCursor.getCount() != 0) {
 			timesCursor.moveToFirst();
-			mRowId = timesCursor.getInt(timesCursor
-					.getColumnIndexOrThrow(DBAdapter.KEY_ROWID));
-			hour = timesCursor.getInt(timesCursor
-					.getColumnIndexOrThrow(DBAdapter.KEY_HOUR));
-			minute = timesCursor.getInt(timesCursor
-					.getColumnIndexOrThrow(DBAdapter.KEY_MINUTE));
+			mRowId = timesCursor.getInt(timesCursor.getColumnIndexOrThrow(DBAdapter.KEY_ROWID));
+			hour = timesCursor.getInt(timesCursor.getColumnIndexOrThrow(DBAdapter.KEY_HOUR));
+			minute = timesCursor.getInt(timesCursor.getColumnIndexOrThrow(DBAdapter.KEY_MINUTE));
 
 			AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
 			Shutdown st = new Shutdown(this, am);
@@ -52,13 +49,11 @@ public class PowerTool extends Activity {
 		timePicker.setCurrentHour(hour);
 		timePicker.setCurrentMinute(minute);
 
-		timePicker
-				.setOnTimeChangedListener(new TimePicker.OnTimeChangedListener() {
-					public void onTimeChanged(TimePicker view, int hourOfDay,
-							int minute) {
-						updateDisplay(hourOfDay, minute);
-					}
-				});
+		timePicker.setOnTimeChangedListener(new TimePicker.OnTimeChangedListener() {
+			public void onTimeChanged(TimePicker view, int hourOfDay, int minute) {
+				updateDisplay(hourOfDay, minute);
+			}
+		});
 
 		Button btnOK = (Button) findViewById(R.id.btnOK);
 		btnOK.setOnClickListener(mSetSchedule);
@@ -84,8 +79,7 @@ public class PowerTool extends Activity {
 	};
 
 	private void updateDisplay(int hourOfDay, int minute) {
-		mTimeDisplay.setText(new StringBuilder().append(pad(hourOfDay)).append(
-				":").append(pad(minute)));
+		mTimeDisplay.setText(new StringBuilder().append(pad(hourOfDay)).append(":").append(pad(minute)));
 	}
 
 	private static String pad(int c) {
@@ -94,33 +88,4 @@ public class PowerTool extends Activity {
 		else
 			return "0" + String.valueOf(c);
 	}
-
-	/*
-	 * private void SetPoweroffSchedule(int hour, int minute){
-	 * 
-	 * Date now = new Date(); Date scheduledate = new Date();
-	 * 
-	 * scheduledate.setHours(hour); scheduledate.setMinutes(minute);
-	 * 
-	 * if( scheduledate.getHours() - now.getHours() < 0 ){
-	 * scheduledate.setDate(now.getDate() + 1); } else if (
-	 * scheduledate.getHours() - now.getHours() == 0){ if(
-	 * scheduledate.getMinutes() - now.getMinutes() <= 0 ){
-	 * scheduledate.setDate(now.getDate() + 1); } }
-	 * 
-	 * Intent intent = new Intent(PowerTool.this, PowerToolService.class);
-	 * PendingIntent sender = PendingIntent.getBroadcast(PowerTool.this, 0,
-	 * intent, 0);
-	 * 
-	 * AlarmManager am = (AlarmManager)getSystemService(ALARM_SERVICE);
-	 * //am.setRepeating(AlarmManager.RTC_WAKEUP, scheduledate.getTime() , 6000
-	 * , sender); am.cancel(sender); am.set(AlarmManager.RTC_WAKEUP,
-	 * scheduledate.getTime() , sender);
-	 * 
-	 * String text =
-	 * String.format("The service will be started in %.1f minutes",
-	 * (scheduledate.getTime() - now.getTime()) / 60000.0);
-	 * Toast.makeText(PowerTool.this, text.subSequence(0, text.length()),
-	 * Toast.LENGTH_LONG).show(); }
-	 */
 }

@@ -1,6 +1,7 @@
 package tice.PowerTool;
 
 import java.util.Date;
+
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -36,16 +37,11 @@ public class Shutdown {
 		Intent intent = new Intent(mCtx, PowerToolService.class);
 		PendingIntent sender = PendingIntent.getBroadcast(mCtx, 0, intent, 0);
 
-		// AlarmManager am = (AlarmManager)getSystemService(ALARM_SERVICE);
-		// am.setRepeating(AlarmManager.RTC_WAKEUP, scheduledate.getTime() ,
-		// 6000 , sender);
 		mArm.cancel(sender);
 		mArm.set(AlarmManager.RTC_WAKEUP, scheduledate.getTime(), sender);
-
-		String text = String.format(
-				"The service will be started in %.1f minutes", (scheduledate
-						.getTime() - now.getTime()) / 60000.0);
-		Toast.makeText(mCtx, text.subSequence(0, text.length()),
-				Toast.LENGTH_LONG).show();
+		//mArm.setRepeating(AlarmManager.RTC_WAKEUP, scheduledate.getTime() ,  6000 , sender);
+		
+		String text = String.format("The service will be started in %.1f minutes", (scheduledate.getTime() - now.getTime()) / 60000.0);
+		Toast.makeText(mCtx, text.subSequence(0, text.length()),Toast.LENGTH_LONG).show();
 	}
 }
