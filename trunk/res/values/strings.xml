@@ -3,4 +3,7 @@
     <string name="hello">Hello World, PowerTool!</string>
     <string name="app_name">PowerTool</string>
 <string name="set_time_failed">Could not set new time schedule</string>
+<string name="app_list">Application List</string>
+<string name="alert_dialog_ok">OK</string>
+<string name="alert_dialog_cancel">Cancel</string>
 </resources>
