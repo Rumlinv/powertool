@@ -5,12 +5,25 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.AlarmManager;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.ComponentName;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.os.Bundle;
-import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -23,6 +36,8 @@ public class PowerTool extends Activity {
 	private DBAdapter mDbHelper;
 	private int mRowId;
 
+    private static final int APPLIST_ID = Menu.FIRST;
+	
 	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -140,10 +155,9 @@ public class PowerTool extends Activity {
             }
 			process.waitFor();
 		} catch (IOException e) {
-			String err = e.getMessage();
-			e.printStackTrace();
+			;
 		} catch (InterruptedException e) {
-			e.printStackTrace();
+			;
 		} 
             try {
                 if (os != null) os.close();
@@ -156,4 +170,84 @@ public class PowerTool extends Activity {
             } catch (Exception e) {;}
 	}
 	
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        super.onCreateOptionsMenu(menu);
+        menu.add(0, APPLIST_ID, 0, R.string.app_list);
+        return true;
+    }
+
+    @Override
+    public boolean onMenuItemSelected(int featureId, MenuItem item) {
+        switch(item.getItemId()) {
+        case APPLIST_ID:
+        	showDialog(APPLIST_ID);
+            return true;
+        }
+       
+        return super.onMenuItemSelected(featureId, item);
+    }	
+
+    protected Dialog onCreateDialog(int id) {
+        switch (id) {
+        case APPLIST_ID:
+            return new AlertDialog.Builder(PowerTool.this)
+            //.setIcon(R.drawable.ic_popup_reminder)
+            .setTitle(R.string.app_list)
+            .setMultiChoiceItems(GetApplications(),
+                    new boolean[]{false},
+                    new DialogInterface.OnMultiChoiceClickListener() {
+                        public void onClick(DialogInterface dialog, int whichButton,
+                                boolean isChecked) {
+
+                            /* User clicked on a check box do some stuff */
+                        }
+                    })
+            .setPositiveButton(R.string.alert_dialog_ok, new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int whichButton) {
+
+                    /* User clicked Yes so do some stuff */
+                }
+            })
+            .setNegativeButton(R.string.alert_dialog_cancel, new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int whichButton) {
+
+                    /* User clicked No so do some stuff */
+                }
+            })
+           .create(); 
+        }
+        return null;
+    }
+    
+	private String[] GetApplications(){
+    	String [] appsstring = {""};
+    	
+        PackageManager manager = getPackageManager();
+
+        Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
+        mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+
+        final List<ResolveInfo> apps = manager.queryIntentActivities(mainIntent, 0);
+        Collections.sort(apps, new ResolveInfo.DisplayNameComparator(manager));
+
+    	
+        if (apps != null) {
+            final int count = apps.size();
+
+            for (int i = 0; i < count; i++) {
+                ApplicationInfo application = new ApplicationInfo();
+                ResolveInfo info = apps.get(i);
+
+                application.title = info.loadLabel(manager);
+                application.setActivity(new ComponentName(
+                        info.activityInfo.applicationInfo.packageName,
+                        info.activityInfo.name),
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                        | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+            }
+        }       
+    	
+		return appsstring;
+    }
 }
