@@ -5,19 +5,16 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import android.app.Activity;
-import android.app.ActivityManager;
 import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.database.Cursor;
@@ -35,6 +32,7 @@ public class PowerTool extends Activity {
 	private TextView mTimeDisplay;
 	private DBAdapter mDbHelper;
 	private int mRowId;
+	private ApplicationInfo mApplist;
 
     private static final int APPLIST_ID = Menu.FIRST;
 	
@@ -191,22 +189,37 @@ public class PowerTool extends Activity {
     protected Dialog onCreateDialog(int id) {
         switch (id) {
         case APPLIST_ID:
+        	GetApplications();
             return new AlertDialog.Builder(PowerTool.this)
             //.setIcon(R.drawable.ic_popup_reminder)
             .setTitle(R.string.app_list)
-            .setMultiChoiceItems(GetApplications(),
-                    new boolean[]{false},
+            .setMultiChoiceItems(mApplist.mTitlelist,
+            		mApplist.mChecklist,
                     new DialogInterface.OnMultiChoiceClickListener() {
-                        public void onClick(DialogInterface dialog, int whichButton,
-                                boolean isChecked) {
-
-                            /* User clicked on a check box do some stuff */
+                        public void onClick(DialogInterface dialog, int whichButton, boolean isChecked) {
+                        	mApplist.mChecklist[whichButton] = isChecked;
                         }
                     })
             .setPositiveButton(R.string.alert_dialog_ok, new DialogInterface.OnClickListener() {
                 public void onClick(DialogInterface dialog, int whichButton) {
+                	SaveApplist();
+    				Cursor appsCursor = mDbHelper.fetchAllAppNames();
+    				if (appsCursor.getCount() != 0) {
+    					appsCursor.moveToFirst();
+    					do{
+    						String packagename = appsCursor.getString(appsCursor.getColumnIndexOrThrow(DBAdapter.KEY_PACKAGENAME));
+    						String name = appsCursor.getString(appsCursor.getColumnIndexOrThrow(DBAdapter.KEY_NAME));
 
-                    /* User clicked Yes so do some stuff */
+    						Intent intent = new Intent(Intent.ACTION_MAIN);
+    				        intent.addCategory(Intent.CATEGORY_LAUNCHER);
+    				        intent.setComponent(new ComponentName( packagename, name));
+    				        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+    						
+    				        startActivity(intent);
+    				        
+    					}while (appsCursor.moveToNext());
+    				}
+    				appsCursor.close();
                 }
             })
             .setNegativeButton(R.string.alert_dialog_cancel, new DialogInterface.OnClickListener() {
@@ -221,7 +234,6 @@ public class PowerTool extends Activity {
     }
     
 	private String[] GetApplications(){
-    	String [] appsstring = {""};
     	
         PackageManager manager = getPackageManager();
 
@@ -234,20 +246,33 @@ public class PowerTool extends Activity {
     	
         if (apps != null) {
             final int count = apps.size();
+            
+            mApplist = new ApplicationInfo(count);
 
             for (int i = 0; i < count; i++) {
-                ApplicationInfo application = new ApplicationInfo();
                 ResolveInfo info = apps.get(i);
-
-                application.title = info.loadLabel(manager);
-                application.setActivity(new ComponentName(
-                        info.activityInfo.applicationInfo.packageName,
-                        info.activityInfo.name),
-                        Intent.FLAG_ACTIVITY_NEW_TASK
-                        | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+                mApplist.mTitlelist[i] = (String)info.loadLabel(manager);
+                mApplist.mPackagelist[i] = info.activityInfo.applicationInfo.packageName;
+                mApplist.mNamelist[i] = info.activityInfo.name;
+                mApplist.mChecklist[i] = mDbHelper.findAppName(info.activityInfo.name);                           
             }
         }       
     	
-		return appsstring;
+		return mApplist.mTitlelist;
     }
+	
+	private void SaveApplist(){
+
+		int count = mApplist.mTitlelist.length;
+		
+		if (count > 0){
+			mDbHelper.DeleteAppNames();
+		}
+			
+        for (int i = 0; i < count; i++) {
+        	if (mApplist.mChecklist[i] == true){
+        		mDbHelper.createAppName(mApplist.mTitlelist[i], mApplist.mPackagelist[i],mApplist.mNamelist[i]);
+        	}
+        }
+	}
 }
