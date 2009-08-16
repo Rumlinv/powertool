@@ -8,6 +8,7 @@ import java.io.InputStreamReader;
 
 import android.app.AlarmManager;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
@@ -38,7 +39,22 @@ public class PowerToolService extends BroadcastReceiver {
 					Shutdown st = new Shutdown(context, am);
 					st.SetPoweroffSchedule(hour, minute);
 				}
-//				Toast.makeText(context, "AutoStart service has started!", Toast.LENGTH_LONG).show();
+				
+				Cursor appsCursor = mDbHelper.fetchAllAppNames();
+				if (appsCursor.getCount() != 0) {
+					appsCursor.moveToFirst();
+					do{
+						String packagename = appsCursor.getString(appsCursor.getColumnIndexOrThrow(DBAdapter.KEY_PACKAGENAME));
+						String name = appsCursor.getString(appsCursor.getColumnIndexOrThrow(DBAdapter.KEY_NAME));
+						Intent newintent = new Intent(Intent.ACTION_MAIN);
+						newintent.addCategory(Intent.CATEGORY_LAUNCHER);
+						newintent.setComponent(new ComponentName( packagename, name));
+						newintent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+						context.startActivity(newintent);
+				        
+					}while (appsCursor.moveToNext());
+				}
+				appsCursor.close();
 			}
 		} else {
 	        if (sWakeLock != null) {
@@ -67,10 +83,10 @@ public class PowerToolService extends BroadcastReceiver {
             	}catch (Exception e) {;}
             }
             
-	        //if (sWakeLock != null) {
-	        //	sWakeLock.release();
-	        //	sWakeLock = null;
-	        //}
+	        if (sWakeLock != null) {
+	        	sWakeLock.release();
+	        	sWakeLock = null;
+	        }
 	        
             ExecUnixCommand("/system/bin/toolbox reboot -p");
         }

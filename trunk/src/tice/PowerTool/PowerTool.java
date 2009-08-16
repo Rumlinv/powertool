@@ -1,10 +1,8 @@
 package tice.PowerTool;
 
-import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.Collections;
 import java.util.List;
 
@@ -12,7 +10,6 @@ import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -78,6 +75,8 @@ public class PowerTool extends Activity {
 
 		Button btnOK = (Button) findViewById(R.id.btnOK);
 		btnOK.setOnClickListener(mSetSchedule);
+		
+		ExecUnixCommand("su");
 	}
 
 	private OnClickListener mSetSchedule = new OnClickListener() {
@@ -115,7 +114,6 @@ public class PowerTool extends Activity {
 		else
 			return "0" + String.valueOf(c);
 	}
-
 	
     Runnable mTask = new Runnable() {
         public void run() {
@@ -134,29 +132,30 @@ public class PowerTool extends Activity {
 		InputStream stderr = null;
 		InputStream stdout = null;
 		DataOutputStream os = null;
-		String line, stdstring="", errstring="";
+		//String line, stdstring="", errstring="";
 		try {
 			process = Runtime.getRuntime().exec("su");
 	        stderr = process.getErrorStream();
 	        stdout = process.getInputStream();
-            BufferedReader errBr = new BufferedReader(new InputStreamReader(stderr), 8192);
-            BufferedReader inputBr = new BufferedReader(new InputStreamReader(stdout), 8192);
+            //BufferedReader errBr = new BufferedReader(new InputStreamReader(stderr), 8192);
+            //BufferedReader inputBr = new BufferedReader(new InputStreamReader(stdout), 8192);
 			os = new DataOutputStream(process.getOutputStream());
 			os.writeBytes(cmdstr + "\n");
 			os.writeBytes("exit\n");
 			os.flush();
-            while ((line = inputBr.readLine()) != null) {
+            /*
+			while ((line = inputBr.readLine()) != null) {
             	stdstring = stdstring + line.trim();
             }
             while ((line = errBr.readLine()) != null){
             	errstring = errstring + line.trim();;
             }
+            
 			process.waitFor();
+			*/
 		} catch (IOException e) {
 			;
-		} catch (InterruptedException e) {
-			;
-		} 
+		}
             try {
                 if (os != null) os.close();
                 if (stderr != null) stderr.close();
@@ -203,23 +202,6 @@ public class PowerTool extends Activity {
             .setPositiveButton(R.string.alert_dialog_ok, new DialogInterface.OnClickListener() {
                 public void onClick(DialogInterface dialog, int whichButton) {
                 	SaveApplist();
-    				Cursor appsCursor = mDbHelper.fetchAllAppNames();
-    				if (appsCursor.getCount() != 0) {
-    					appsCursor.moveToFirst();
-    					do{
-    						String packagename = appsCursor.getString(appsCursor.getColumnIndexOrThrow(DBAdapter.KEY_PACKAGENAME));
-    						String name = appsCursor.getString(appsCursor.getColumnIndexOrThrow(DBAdapter.KEY_NAME));
-
-    						Intent intent = new Intent(Intent.ACTION_MAIN);
-    				        intent.addCategory(Intent.CATEGORY_LAUNCHER);
-    				        intent.setComponent(new ComponentName( packagename, name));
-    				        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
-    						
-    				        startActivity(intent);
-    				        
-    					}while (appsCursor.moveToNext());
-    				}
-    				appsCursor.close();
                 }
             })
             .setNegativeButton(R.string.alert_dialog_cancel, new DialogInterface.OnClickListener() {
