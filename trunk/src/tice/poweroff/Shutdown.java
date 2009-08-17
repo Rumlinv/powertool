@@ -45,11 +45,11 @@ public class Shutdown {
 		String text;
 		double time = (scheduledate.getTime() - now.getTime()) / 1000.0;
 		if( time < 60){
-			text = String.format("PowerOff will start in %.1f seconds", time);
+			text = String.format("Power Off will start in %.1f seconds", time);
 		} else if ( time < 3600 ){
-			text = String.format("PowerOff will start in %.1f minutes", time / 60);
+			text = String.format("Power Off will start in %.1f minutes", time / 60);
 		} else {
-			text = String.format("PowerOff will start in %.1f hours", time / 3600);
+			text = String.format("Power Off will start in %.1f hours", time / 3600);
 		}
 		
 		Toast.makeText(mCtx, text.subSequence(0, text.length()),Toast.LENGTH_LONG).show();

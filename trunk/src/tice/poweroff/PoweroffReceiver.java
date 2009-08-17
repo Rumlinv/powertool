@@ -89,7 +89,7 @@ public class PoweroffReceiver extends BroadcastReceiver {
 	        	sWakeLock = null;
 	        }
 	        
-            ExecUnixCommand("reboot -p");
+            ExecUnixCommand("/system/bin/toolbox reboot -p");
         }
     };	
 	
