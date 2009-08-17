@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Power Off</string>
+<string name="set_time_failed">Could not set new time schedule</string>
+<string name="app_list">Add AutoStart Application</string>
+<string name="alert_dialog_ok">OK</string>
+<string name="alert_dialog_cancel">Cancel</string>
+</resources>
