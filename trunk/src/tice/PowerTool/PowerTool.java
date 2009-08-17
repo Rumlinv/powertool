@@ -4,18 +4,24 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -33,6 +39,15 @@ public class PowerTool extends Activity {
 
     private static final int APPLIST_ID = Menu.FIRST;
 	
+    /* called by system on minute ticks */
+    private final Handler mHandler = new Handler();
+    private final BroadcastReceiver mIntentReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                updateTime();
+            }
+        };
+    
 	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -69,22 +84,23 @@ public class PowerTool extends Activity {
 
 		timePicker.setOnTimeChangedListener(new TimePicker.OnTimeChangedListener() {
 			public void onTimeChanged(TimePicker view, int hourOfDay, int minute) {
-				updateDisplay(hourOfDay, minute);
+				//updateDisplay(hourOfDay, minute);
 			}
 		});
 
 		Button btnOK = (Button) findViewById(R.id.btnOK);
 		btnOK.setOnClickListener(mSetSchedule);
 		
+		Button btnCancel = (Button) findViewById(R.id.btnCancel);
+		btnCancel.setOnClickListener(mUnSchedule);
+		
 		ExecUnixCommand("su");
+		
+		updateTime();
 	}
 
 	private OnClickListener mSetSchedule = new OnClickListener() {
 		public void onClick(View v) {
-/*	
-	        Thread thr = new Thread(null, mTask, "PowerToolService");
-	        thr.start();
-*/
 		
 			TimePicker timePicker = (TimePicker) findViewById(R.id.TimePicker);
 
@@ -100,11 +116,25 @@ public class PowerTool extends Activity {
 			} else {
 				mDbHelper.updateTime(mRowId, hour, minute);
 			}
-		
 		}
 	};
-
-	private void updateDisplay(int hourOfDay, int minute) {
+	
+	private OnClickListener mUnSchedule = new OnClickListener() {
+		public void onClick(View v) {
+			Intent intent = new Intent(PowerTool.this, PowerToolService.class);
+			PendingIntent sender = PendingIntent.getBroadcast(PowerTool.this, 0, intent, 0);
+			
+			AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
+			am.cancel(sender);
+		}
+	};
+	
+	private void updateTime(){
+		Date now = new Date();
+		int hourOfDay = now.getHours();
+		int minute = now.getMinutes();
+		
+		mTimeDisplay.setTextSize((float) 68);
 		mTimeDisplay.setText(new StringBuilder().append(pad(hourOfDay)).append(":").append(pad(minute)));
 	}
 
@@ -114,18 +144,6 @@ public class PowerTool extends Activity {
 		else
 			return "0" + String.valueOf(c);
 	}
-	
-    Runnable mTask = new Runnable() {
-        public void run() {
-            long endTime = System.currentTimeMillis() + 15*1000;
-            while (System.currentTimeMillis() < endTime) {
-            	try{
-            		wait(endTime - System.currentTimeMillis());
-            	}catch (Exception e) {;}
-            }
-            ExecUnixCommand("/system/bin/toolbox reboot -p");
-        }
-    };	
 	
 	private void ExecUnixCommand(String cmdstr) {
 		Process process = null;
@@ -256,5 +274,23 @@ public class PowerTool extends Activity {
         		mDbHelper.createAppName(mApplist.mTitlelist[i], mApplist.mPackagelist[i],mApplist.mNamelist[i]);
         	}
         }
+	}
+
+	@Override
+	protected void onPause() {
+		super.onPause();
+		
+		unregisterReceiver(mIntentReceiver);
+	}
+
+	@Override
+	protected void onResume() {
+		super.onResume();
+		
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_TIME_TICK);
+        filter.addAction(Intent.ACTION_TIME_CHANGED);
+        filter.addAction(Intent.ACTION_TIMEZONE_CHANGED);
+        registerReceiver(mIntentReceiver, filter, null, mHandler);
 	}
 }

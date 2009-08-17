@@ -17,7 +17,7 @@ public class Shutdown {
 		mCtx = c;
 		mArm = am;
 	}
-
+	
 	public void SetPoweroffSchedule(int hour, int minute) {
 
 		Date now = new Date();
