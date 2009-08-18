@@ -1,8 +1,5 @@
 package tice.poweroff;
 
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 
@@ -20,7 +17,6 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.widget.AnalogClock;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.TimePicker;
@@ -29,7 +25,7 @@ import android.widget.CompoundButton.OnCheckedChangeListener;
 
 public class Poweroff extends Activity {
 
-	private AnalogClock mTimeDisplay;
+	//private AnalogClock mTimeDisplay;
 	private DBAdapter mDbHelper;
 	private int mRowId;
 	private ApplicationInfo mApplist;
@@ -73,7 +69,7 @@ public class Poweroff extends Activity {
 			st.SetPoweroffSchedule(hour, minute);
 		}
 
-		mTimeDisplay = (AnalogClock) findViewById(R.id.AnalogClock);
+		//mTimeDisplay = (AnalogClock) findViewById(R.id.AnalogClock);
 
 		TimePicker timePicker = (TimePicker) findViewById(R.id.TimePicker);
 		timePicker.setIs24HourView(true);
@@ -98,9 +94,9 @@ public class Poweroff extends Activity {
 		chkPoweroff.setChecked(true);
 		chkPoweroff.setOnCheckedChangeListener(mCheckPoweroff);
 		
-		ExecUnixCommand("su");
+		Shutdown.ExecUnixCommand("su");
 	}
-	
+
 	private OnCheckedChangeListener mCheckPoweroff = new OnCheckedChangeListener(){
 		@Override
 		public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -180,48 +176,31 @@ public class Poweroff extends Activity {
 			return "0" + String.valueOf(c);
 	}
 */
-	
-	private void ExecUnixCommand(String cmdstr) {
-		Process process = null;
-		InputStream stderr = null;
-		InputStream stdout = null;
-		DataOutputStream os = null;
-		//String line, stdstring="", errstring="";
-		try {
-			process = Runtime.getRuntime().exec("su");
-	        stderr = process.getErrorStream();
-	        stdout = process.getInputStream();
-            //BufferedReader errBr = new BufferedReader(new InputStreamReader(stderr), 8192);
-            //BufferedReader inputBr = new BufferedReader(new InputStreamReader(stdout), 8192);
-			os = new DataOutputStream(process.getOutputStream());
-			os.writeBytes(cmdstr + "\n");
-			os.flush();
-			os.writeBytes("exit\n");
-			os.flush();
-            /*
-			while ((line = inputBr.readLine()) != null) {
-            	stdstring = stdstring + line.trim();
+    
+	Runnable mTaskPoweroff = new Runnable() {
+        public void run() {
+            long endTime = System.currentTimeMillis() + 500;
+            while (System.currentTimeMillis() < endTime) {
+            	try{
+            		wait(endTime - System.currentTimeMillis());
+            	}catch (Exception e) {;}
             }
-            while ((line = errBr.readLine()) != null){
-            	errstring = errstring + line.trim();;
+            Shutdown.ExecUnixCommand("/system/bin/toolbox reboot -p");
+        }
+    };	
+    
+    Runnable mTaskReboot = new Runnable() {
+        public void run() {
+            long endTime = System.currentTimeMillis() + 500;
+            while (System.currentTimeMillis() < endTime) {
+            	try{
+            		wait(endTime - System.currentTimeMillis());
+            	}catch (Exception e) {;}
             }
-            
-			process.waitFor();
-			*/
-		} catch (IOException e) {
-			;
-		}
-            try {
-                if (os != null) os.close();
-                if (stderr != null) stderr.close();
-                if (stdout != null) stdout.close();
-            } catch (Exception ex) {;}
-
-            try {
-            	process.destroy();
-            } catch (Exception e) {;}
-	}
-	
+            Shutdown.ExecUnixCommand("/system/bin/toolbox reboot");
+        }
+    };
+    
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         super.onCreateOptionsMenu(menu);
@@ -241,12 +220,14 @@ public class Poweroff extends Activity {
         case R.id.about:
         	showDialog(ABOUT_ID);
         	break;
-//        case R.id.poweroff_now:
-//        	ExecUnixCommand("/system/bin/toolbox reboot -p");
-//        	break; 
-//        case R.id.reboot_now:
-//        	ExecUnixCommand("/system/bin/toolbox reboot");
-//        	break; 
+        case R.id.poweroff_now:
+	        Thread thr1 = new Thread(null, mTaskPoweroff, "PowerToolService");
+	        thr1.start();
+        	break; 
+        case R.id.reboot_now:
+	        Thread thr2 = new Thread(null, mTaskReboot, "PowerToolService");
+	        thr2.start();
+        	break; 
         }
        
         return super.onMenuItemSelected(featureId, item);
@@ -328,23 +309,5 @@ public class Poweroff extends Activity {
         		mDbHelper.createAppName(mApplist.mTitlelist[i], mApplist.mPackagelist[i],mApplist.mNamelist[i]);
         	}
         }
-	}
-
-	@Override
-	protected void onPause() {
-		super.onPause();
-//		unregisterReceiver(mIntentReceiver);
-	}
-
-	@Override
-	protected void onResume() {
-		super.onResume();
-/*		
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(Intent.ACTION_TIME_TICK);
-        filter.addAction(Intent.ACTION_TIME_CHANGED);
-        filter.addAction(Intent.ACTION_TIMEZONE_CHANGED);
-        registerReceiver(mIntentReceiver, filter, null, mHandler);
-*/	
 	}
 }

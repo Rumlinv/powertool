@@ -1,11 +1,5 @@
 package tice.poweroff;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-
 import android.app.AlarmManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -17,11 +11,13 @@ import android.widget.Toast;
 
 public class PoweroffReceiver extends BroadcastReceiver {
 
+	static final String CUSTOM_ACTION_POWEROFF = "tice.poweroff.intent.action.CUSTOM_ACTION_POWEROFF"; 
 	static final String ACTION = "android.intent.action.BOOT_COMPLETED";
 	static PowerManager.WakeLock sWakeLock;
 	
 	@Override
 	public void onReceive(Context context, Intent intent) {
+
 		String action = intent.getAction();
 		if (action != null) {
 			if (action.equals(ACTION)) {
@@ -56,6 +52,8 @@ public class PoweroffReceiver extends BroadcastReceiver {
 					}while (appsCursor.moveToNext());
 				}
 				appsCursor.close();
+			} else if (action.equals(CUSTOM_ACTION_POWEROFF)) {
+				Shutdown.ExecUnixCommand("/system/bin/toolbox reboot");
 			}
 		} else {
 	        if (sWakeLock != null) {
@@ -89,43 +87,7 @@ public class PoweroffReceiver extends BroadcastReceiver {
 	        	sWakeLock = null;
 	        }
 	        
-            ExecUnixCommand("/system/bin/toolbox reboot -p");
+            Shutdown.ExecUnixCommand("/system/bin/toolbox reboot -p");
         }
     };	
-	
-	private void ExecUnixCommand(String cmdstr) {
-		Process process = null;
-		InputStream stderr = null;
-		InputStream stdout = null;
-		DataOutputStream os = null;
-		String line, stdstring="", errstring="";
-		try {
-			process = Runtime.getRuntime().exec("su");
-	        stderr = process.getErrorStream();
-	        stdout = process.getInputStream();
-            BufferedReader errBr = new BufferedReader(new InputStreamReader(stderr), 8192);
-            BufferedReader inputBr = new BufferedReader(new InputStreamReader(stdout), 8192);
-			os = new DataOutputStream(process.getOutputStream());
-			os.writeBytes(cmdstr + "\n");
-			os.flush();
-			os.writeBytes("exit\n");
-			os.flush();
-            while ((line = inputBr.readLine()) != null) {
-            	stdstring = stdstring + line.trim();
-            }
-            while ((line = errBr.readLine()) != null){
-            	errstring = errstring + line.trim();;
-            }
-			//process.waitFor();
-		} catch (IOException e) {;} 
-            try {
-                if (os != null) os.close();
-                if (stderr != null) stderr.close();
-                if (stdout != null) stdout.close();
-            } catch (Exception ex) {;}
-
-            try {
-            	process.destroy();
-            } catch (Exception e) {;}
-	}
 }

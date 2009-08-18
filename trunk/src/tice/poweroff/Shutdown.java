@@ -1,5 +1,10 @@
 package tice.poweroff;
 
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Date;
 
 import android.app.AlarmManager;
@@ -53,5 +58,41 @@ public class Shutdown {
 		}
 		
 		Toast.makeText(mCtx, text.subSequence(0, text.length()),Toast.LENGTH_LONG).show();
+	}
+	
+	static public void ExecUnixCommand(String cmdstr) {
+		Process process = null;
+		InputStream stderr = null;
+		InputStream stdout = null;
+		DataOutputStream os = null;
+		String line, stdstring="", errstring="";
+		try {
+			process = Runtime.getRuntime().exec("su");
+	        stderr = process.getErrorStream();
+	        stdout = process.getInputStream();
+            BufferedReader errBr = new BufferedReader(new InputStreamReader(stderr), 8192);
+            BufferedReader inputBr = new BufferedReader(new InputStreamReader(stdout), 8192);
+			os = new DataOutputStream(process.getOutputStream());
+			os.writeBytes(cmdstr + "\n");
+			os.flush();
+			os.writeBytes("exit\n");
+			os.flush();
+            while (inputBr.ready() && (line = inputBr.readLine()) != null) {
+            	stdstring = stdstring + line.trim();
+            }
+            while (errBr.ready() && (line = errBr.readLine()) != null){
+            	errstring = errstring + line.trim();;
+            }
+			//process.waitFor();
+		} catch (IOException e) {;} 
+            try {
+                if (os != null) os.close();
+                if (stderr != null) stderr.close();
+                if (stdout != null) stdout.close();
+            } catch (Exception ex) {;}
+
+            try {
+            	process.destroy();
+            } catch (Exception e) {;}
 	}
 }
