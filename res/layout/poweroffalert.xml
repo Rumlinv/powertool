@@ -10,14 +10,13 @@
 
 	<Button android:text="Reboot now" 
 		android:id="@+id/btnReboot" 
-		android:layout_width="130px" 
 		android:layout_height="wrap_content" 
-		android:gravity="center">
+		android:gravity="center" android:drawableLeft="@drawable/icon3" android:layout_width="180px">
 	</Button>    
 	<Button android:text="Power off now" 
 			android:id="@+id/btnPoweroff" 
-			android:layout_width="130px" 
 			android:layout_height="wrap_content" 
-			android:gravity="center">
+			android:gravity="center" android:drawableLeft="@drawable/iconwidget" android:layout_width="180px">
 	</Button>
+
 </LinearLayout>

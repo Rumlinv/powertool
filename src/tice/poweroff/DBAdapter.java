@@ -15,6 +15,7 @@ public class DBAdapter {
 	public static final String KEY_NAME = "name";
 	public static final String KEY_HOUR = "Hour";
 	public static final String KEY_MINUTE = "Minute";
+	public static final String KEY_ENABLE = "Enable";
 	public static final String KEY_ROWID = "_id";
 
 	private static final String TAG = "DBAdapter";
@@ -22,7 +23,7 @@ public class DBAdapter {
 	private SQLiteDatabase mDb;
 
 	private static final String DATABASE_CREATE_TIMES = "create table times (_id integer primary key autoincrement, "
-			+ "Hour integer not null, Minute integer not null);";
+			+ "Hour integer not null, Minute integer not null, Enable integer not null);";
 	private static final String DATABASE_CREATE_APPS = "create table apps (_id integer primary key autoincrement, "
 		+ "name string not null, label string not null, package string not null);";
 
@@ -30,7 +31,7 @@ public class DBAdapter {
 	private static final String DATABASE_NAME = "data";
 	private static final String DATABASE_TABLE_TIMES = "times";
 	private static final String DATABASE_TABLE_APPS = "apps";
-	private static final int DATABASE_VERSION = 3;
+	private static final int DATABASE_VERSION = 4;
 
 	private final Context mCtx;
 
@@ -71,10 +72,11 @@ public class DBAdapter {
 		mDbHelper.close();
 	}
 
-	public long createTime(int hour, int minute) {
+	public long createTime(int hour, int minute, int enable) {
 		ContentValues initialValues = new ContentValues();
 		initialValues.put(KEY_HOUR, hour);
 		initialValues.put(KEY_MINUTE, minute);
+		initialValues.put(KEY_ENABLE, enable);
 		return mDb.insert(DATABASE_TABLE_TIMES, null, initialValues);
 	}
 	
@@ -87,7 +89,7 @@ public class DBAdapter {
 		Cursor mCursor =
 
 		mDb.query(true, DATABASE_TABLE_TIMES, new String[] { KEY_ROWID, KEY_HOUR,
-				KEY_MINUTE }, KEY_ROWID + "=" + rowId, null, null, null, null,
+				KEY_MINUTE, KEY_ENABLE }, KEY_ROWID + "=" + rowId, null, null, null, null,
 				null);
 		if (mCursor != null) {
 			mCursor.moveToFirst();
@@ -98,13 +100,14 @@ public class DBAdapter {
 
 	public Cursor fetchAllTimes() {
 		return mDb.query(DATABASE_TABLE_TIMES, new String[] { KEY_ROWID, KEY_HOUR,
-				KEY_MINUTE }, null, null, null, null, null);
+				KEY_MINUTE, KEY_ENABLE }, null, null, null, null, null);
 	}
 
-	public boolean updateTime(long rowId, int hour, int minute) {
+	public boolean updateTime(long rowId, int hour, int minute, int enable) {
 		ContentValues args = new ContentValues();
 		args.put(KEY_HOUR, hour);
 		args.put(KEY_MINUTE, minute);
+		args.put(KEY_ENABLE, enable);
 
 		return mDb.update(DATABASE_TABLE_TIMES, args, KEY_ROWID + "=" + rowId, null) > 0;
 	}

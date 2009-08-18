@@ -22,39 +22,13 @@ public class PoweroffAlert extends Activity {
 	
 	private OnClickListener mPoweroff = new OnClickListener() {
 		public void onClick(View v) {
-	        Thread thr1 = new Thread(null, mTaskPoweroff, "PowerToolService");
-	        thr1.start();
+			Shutdown.Poweroff(PoweroffAlert.this);
 		}
 	};	
 	
 	private OnClickListener mReboot = new OnClickListener() {
 		public void onClick(View v) {
-	        Thread thr1 = new Thread(null, mTaskReboot, "PowerToolService");
-	        thr1.start();
+			Shutdown.Reboot(PoweroffAlert.this);
 		}
 	};	
-	
-	Runnable mTaskPoweroff = new Runnable() {
-        public void run() {
-            long endTime = System.currentTimeMillis() + 500;
-            while (System.currentTimeMillis() < endTime) {
-            	try{
-            		wait(endTime - System.currentTimeMillis());
-            	}catch (Exception e) {;}
-            }
-            Shutdown.ExecUnixCommand("/system/bin/toolbox reboot -p");
-        }
-    };	
-    
-    Runnable mTaskReboot = new Runnable() {
-        public void run() {
-            long endTime = System.currentTimeMillis() + 500;
-            while (System.currentTimeMillis() < endTime) {
-            	try{
-            		wait(endTime - System.currentTimeMillis());
-            	}catch (Exception e) {;}
-            }
-            Shutdown.ExecUnixCommand("/system/bin/toolbox reboot");
-        }
-    };
 }

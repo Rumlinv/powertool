@@ -33,15 +33,6 @@ public class Poweroff extends Activity {
     private static final int APPLIST_ID = Menu.FIRST;
     private static final int ABOUT_ID = Menu.FIRST + 1;
 	
-/*
-    private final Handler mHandler = new Handler();
-    private final BroadcastReceiver mIntentReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                //updateTime();
-            }
-        };
-*/    
 	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -54,6 +45,7 @@ public class Poweroff extends Activity {
 
 		int hour = 02;
 		int minute = 00;
+		int enable = 0;
 
 		Cursor timesCursor = mDbHelper.fetchAllTimes();
 		// startManagingCursor(timesCursor);
@@ -62,11 +54,14 @@ public class Poweroff extends Activity {
 			mRowId = timesCursor.getInt(timesCursor.getColumnIndexOrThrow(DBAdapter.KEY_ROWID));
 			hour = timesCursor.getInt(timesCursor.getColumnIndexOrThrow(DBAdapter.KEY_HOUR));
 			minute = timesCursor.getInt(timesCursor.getColumnIndexOrThrow(DBAdapter.KEY_MINUTE));
+			enable = timesCursor.getInt(timesCursor.getColumnIndexOrThrow(DBAdapter.KEY_ENABLE));
 			timesCursor.close();
 			
-			AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
-			Shutdown st = new Shutdown(this, am);
-			st.SetPoweroffSchedule(hour, minute);
+			if (enable != 0){
+				AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
+				Shutdown st = new Shutdown(this, am);
+				st.SetPoweroffSchedule(hour, minute);
+			}
 		}
 
 		//mTimeDisplay = (AnalogClock) findViewById(R.id.AnalogClock);
@@ -76,13 +71,15 @@ public class Poweroff extends Activity {
 		timePicker.setCurrentHour(hour);
 		timePicker.setCurrentMinute(minute);
 
-/*
+
 		timePicker.setOnTimeChangedListener(new TimePicker.OnTimeChangedListener() {
 			public void onTimeChanged(TimePicker view, int hourOfDay, int minute) {
-				//updateDisplay(hourOfDay, minute);
+				CheckBox chkPoweroff = (CheckBox) findViewById(R.id.CheckBox);
+				chkPoweroff.setChecked(false);
 			}
 		});
-
+		
+/*
 		Button btnOK = (Button) findViewById(R.id.btnOK);
 		btnOK.setOnClickListener(mSetSchedule);
 		
@@ -91,31 +88,31 @@ public class Poweroff extends Activity {
 */
 		
 		CheckBox chkPoweroff = (CheckBox) findViewById(R.id.CheckBox);
-		chkPoweroff.setChecked(true);
+		chkPoweroff.setChecked(enable == 0? false : true);
 		chkPoweroff.setOnCheckedChangeListener(mCheckPoweroff);
 		
-		Shutdown.ExecUnixCommand("su");
+		Shutdown.Getsu();
 	}
 
 	private OnCheckedChangeListener mCheckPoweroff = new OnCheckedChangeListener(){
 		@Override
 		public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+			TimePicker timePicker = (TimePicker) findViewById(R.id.TimePicker);
+			int hour = timePicker.getCurrentHour();
+			int minute = timePicker.getCurrentMinute();
+			int enable = 0;
+
 			if (isChecked == true){
-				TimePicker timePicker = (TimePicker) findViewById(R.id.TimePicker);
-
-				int hour = timePicker.getCurrentHour();
-				int minute = timePicker.getCurrentMinute();
-
+				enable = 1;
+				
 				AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
 				Shutdown st = new Shutdown(Poweroff.this, am);
 				st.SetPoweroffSchedule(hour, minute);
 
-				if (mRowId == -1) {
-					mDbHelper.createTime(hour, minute);
-				} else {
-					mDbHelper.updateTime(mRowId, hour, minute);
-				}
 			}else{
+				enable = 0;
+				
 				Intent intent = new Intent(Poweroff.this, PoweroffReceiver.class);
 				PendingIntent sender = PendingIntent.getBroadcast(Poweroff.this, 0, intent, 0);
 				
@@ -124,41 +121,16 @@ public class Poweroff extends Activity {
 
 				Toast.makeText(Poweroff.this, "Power Off is unscheduled", Toast.LENGTH_LONG).show();
 			}
-		}
-	};
-	
-/*
-	private OnClickListener mSetSchedule = new OnClickListener() {
-		public void onClick(View v) {
-		
-			TimePicker timePicker = (TimePicker) findViewById(R.id.TimePicker);
-
-			int hour = timePicker.getCurrentHour();
-			int minute = timePicker.getCurrentMinute();
-
-			AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
-			Shutdown st = new Shutdown(Poweroff.this, am);
-			st.SetPoweroffSchedule(hour, minute);
-
+			
 			if (mRowId == -1) {
-				mDbHelper.createTime(hour, minute);
+				mDbHelper.createTime(hour, minute,enable);
 			} else {
-				mDbHelper.updateTime(mRowId, hour, minute);
+				mDbHelper.updateTime(mRowId, hour, minute,enable);
 			}
 		}
 	};
 	
-	private OnClickListener mUnSchedule = new OnClickListener() {
-		public void onClick(View v) {
-			Intent intent = new Intent(Poweroff.this, PoweroffReceiver.class);
-			PendingIntent sender = PendingIntent.getBroadcast(Poweroff.this, 0, intent, 0);
-			
-			AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
-			am.cancel(sender);
-
-			Toast.makeText(Poweroff.this, "Power Off is unscheduled", Toast.LENGTH_LONG).show();
-		}
-	};
+/*
 	
 	private void updateTime(){
 		Date now = new Date();
@@ -176,30 +148,6 @@ public class Poweroff extends Activity {
 			return "0" + String.valueOf(c);
 	}
 */
-    
-	Runnable mTaskPoweroff = new Runnable() {
-        public void run() {
-            long endTime = System.currentTimeMillis() + 500;
-            while (System.currentTimeMillis() < endTime) {
-            	try{
-            		wait(endTime - System.currentTimeMillis());
-            	}catch (Exception e) {;}
-            }
-            Shutdown.ExecUnixCommand("/system/bin/toolbox reboot -p");
-        }
-    };	
-    
-    Runnable mTaskReboot = new Runnable() {
-        public void run() {
-            long endTime = System.currentTimeMillis() + 500;
-            while (System.currentTimeMillis() < endTime) {
-            	try{
-            		wait(endTime - System.currentTimeMillis());
-            	}catch (Exception e) {;}
-            }
-            Shutdown.ExecUnixCommand("/system/bin/toolbox reboot");
-        }
-    };
     
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -221,12 +169,10 @@ public class Poweroff extends Activity {
         	showDialog(ABOUT_ID);
         	break;
         case R.id.poweroff_now:
-	        Thread thr1 = new Thread(null, mTaskPoweroff, "PowerToolService");
-	        thr1.start();
+        	Shutdown.Poweroff(Poweroff.this);
         	break; 
         case R.id.reboot_now:
-	        Thread thr2 = new Thread(null, mTaskReboot, "PowerToolService");
-	        thr2.start();
+        	Shutdown.Reboot(Poweroff.this);
         	break; 
         }
        
@@ -238,7 +184,7 @@ public class Poweroff extends Activity {
         case ABOUT_ID:
         	return new AlertDialog.Builder(Poweroff.this)
         	.setTitle(R.string.app_name)
-        	.setMessage("Ver 1.0 Created by Tice")
+        	.setMessage("Version 1.1 -- Created by Tice")
         	.create();
         case APPLIST_ID:
         	GetApplications();
