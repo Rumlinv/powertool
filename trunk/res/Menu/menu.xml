@@ -23,9 +23,11 @@
 		android:title="@string/more">
 	   <menu>        
             <item android:id="@+id/reboot_now"
-                android:title="@string/reboot_now" />
+                android:title="@string/reboot_now" 
+                android:icon="@drawable/icon3"/>
             <item android:id="@+id/poweroff_now"
-                android:title="@string/poweroff_now" />
+                android:title="@string/poweroff_now"
+                android:icon="@drawable/iconwidget"/>
         </menu>
 	</item>
 		
