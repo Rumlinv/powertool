@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="fill_parent" 
+    android:layout_height="fill_parent"
+    android:gravity="center_horizontal"
+    android:orientation="vertical">
+    
+
+	<Button android:text="Reboot now" 
+		android:id="@+id/btnReboot" 
+		android:layout_width="130px" 
+		android:layout_height="wrap_content" 
+		android:gravity="center">
+	</Button>    
+	<Button android:text="Power off now" 
+			android:id="@+id/btnPoweroff" 
+			android:layout_width="130px" 
+			android:layout_height="wrap_content" 
+			android:gravity="center">
+	</Button>
+</LinearLayout>
