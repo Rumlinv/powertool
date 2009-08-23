@@ -55,7 +55,6 @@ public class Poweroff extends Activity {
 			hour = timesCursor.getInt(timesCursor.getColumnIndexOrThrow(DBAdapter.KEY_HOUR));
 			minute = timesCursor.getInt(timesCursor.getColumnIndexOrThrow(DBAdapter.KEY_MINUTE));
 			enable = timesCursor.getInt(timesCursor.getColumnIndexOrThrow(DBAdapter.KEY_ENABLE));
-			timesCursor.close();
 			
 			if (enable != 0){
 				AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
@@ -63,6 +62,7 @@ public class Poweroff extends Activity {
 				st.SetPoweroffSchedule(hour, minute);
 			}
 		}
+		timesCursor.close();
 
 		//mTimeDisplay = (AnalogClock) findViewById(R.id.AnalogClock);
 
@@ -161,7 +161,9 @@ public class Poweroff extends Activity {
 
     @Override
     public boolean onMenuItemSelected(int featureId, MenuItem item) {
-        switch(item.getItemId()) {
+    	super.onMenuItemSelected(featureId, item);
+    	
+    	switch(item.getItemId()) {
         case R.id.app_list:
         	showDialog(APPLIST_ID);
         	break;
@@ -176,7 +178,7 @@ public class Poweroff extends Activity {
         	break; 
         }
        
-        return super.onMenuItemSelected(featureId, item);
+        return true;
     }	
 
     protected Dialog onCreateDialog(int id) {
@@ -184,38 +186,46 @@ public class Poweroff extends Activity {
         case ABOUT_ID:
         	return new AlertDialog.Builder(Poweroff.this)
         	.setTitle(R.string.app_name)
-        	.setMessage("Version 1.1 -- Created by Tice")
+        	.setMessage("Version 1.0.2 -- Created by Tice")
         	.create();
         case APPLIST_ID:
-        	GetApplications();
-            return new AlertDialog.Builder(Poweroff.this)
-            //.setIcon(R.drawable.ic_popup_reminder)
-            .setTitle(R.string.app_list)
-            .setMultiChoiceItems(mApplist.mTitlelist,
-            		mApplist.mChecklist,
-                    new DialogInterface.OnMultiChoiceClickListener() {
-                        public void onClick(DialogInterface dialog, int whichButton, boolean isChecked) {
-                        	mApplist.mChecklist[whichButton] = isChecked;
-                        }
-                    })
-            .setPositiveButton(R.string.alert_dialog_ok, new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int whichButton) {
-                	SaveApplist();
-                }
-            })
-            .setNegativeButton(R.string.alert_dialog_cancel, new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int whichButton) {
-
-                    /* User clicked No so do some stuff */
-                }
-            })
-           .create(); 
+        	if (GetApplications() == true){
+	            return new AlertDialog.Builder(Poweroff.this)
+	            //.setIcon(R.drawable.ic_popup_reminder)
+	            .setTitle(R.string.app_list)
+	            .setMultiChoiceItems(mApplist.mTitlelist,
+	            		mApplist.mChecklist,
+	                    new DialogInterface.OnMultiChoiceClickListener() {
+	                        public void onClick(DialogInterface dialog, int whichButton, boolean isChecked) {
+	                        	mApplist.mChecklist[whichButton] = isChecked;
+	                        }
+	                    })
+	            .setPositiveButton(R.string.alert_dialog_ok, new DialogInterface.OnClickListener() {
+	                public void onClick(DialogInterface dialog, int whichButton) {
+	                	SaveApplist();
+	                }
+	            })
+	            .setNegativeButton(R.string.alert_dialog_cancel, new DialogInterface.OnClickListener() {
+	                public void onClick(DialogInterface dialog, int whichButton) {
+	
+	                    /* User clicked No so do some stuff */
+	                }
+	            })
+	           .create(); 
+        	} else {
+	            return new AlertDialog.Builder(Poweroff.this)
+	            .setTitle(R.string.app_list)
+	            .setMessage("Failed to get apps")
+	            .create();
+        	}
         }
         return null;
     }
     
-	private String[] GetApplications(){
+	private boolean GetApplications(){
     	
+		boolean bRet = false;
+		
         PackageManager manager = getPackageManager();
 
         Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
@@ -232,14 +242,18 @@ public class Poweroff extends Activity {
 
             for (int i = 0; i < count; i++) {
                 ResolveInfo info = apps.get(i);
-                mApplist.mTitlelist[i] = (String)info.loadLabel(manager);
+                mApplist.mTitlelist[i] = info.loadLabel(manager).toString();
                 mApplist.mPackagelist[i] = info.activityInfo.applicationInfo.packageName;
                 mApplist.mNamelist[i] = info.activityInfo.name;
                 mApplist.mChecklist[i] = mDbHelper.findAppName(info.activityInfo.name);                           
             }
+            
+            if(count > 0){
+            	bRet = true;
+            }
         }       
-    	
-		return mApplist.mTitlelist;
+   	
+		return bRet;
     }
 	
 	private void SaveApplist(){
