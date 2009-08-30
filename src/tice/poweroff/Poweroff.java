@@ -8,12 +8,15 @@ import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.PendingIntent;
+import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -28,8 +31,12 @@ public class Poweroff extends Activity {
 	//private AnalogClock mTimeDisplay;
 	private DBAdapter mDbHelper;
 	private int mRowId;
+	private boolean mReturn = false;
 	private ApplicationInfo mApplist;
+	private ProgressDialog mProgressdialog;
 
+	private static final int GETAPPLICATIONS_DLG = 10;
+	private static final int GETAPPLICATIONS_FINISH = 1;
     private static final int APPLIST_ID = Menu.FIRST;
     private static final int ABOUT_ID = Menu.FIRST + 1;
 	
@@ -165,7 +172,9 @@ public class Poweroff extends Activity {
     	
     	switch(item.getItemId()) {
         case R.id.app_list:
-        	showDialog(APPLIST_ID);
+            Thread thr = new Thread(null, mTaskGetApplications, "ConvertThread");
+            thr.start();
+        	showDialog(GETAPPLICATIONS_DLG);
         	break;
         case R.id.about:
         	showDialog(ABOUT_ID);
@@ -183,13 +192,19 @@ public class Poweroff extends Activity {
 
     protected Dialog onCreateDialog(int id) {
         switch (id) {
+        case GETAPPLICATIONS_DLG:
+        	mProgressdialog = new ProgressDialog(this);
+        	mProgressdialog.setMessage("Getting Installed Applications");
+        	mProgressdialog.setIndeterminate(true);
+        	mProgressdialog.setCancelable(false);
+        	return mProgressdialog;
         case ABOUT_ID:
         	return new AlertDialog.Builder(Poweroff.this)
         	.setTitle(R.string.app_name)
-        	.setMessage("Version 1.0.2 -- Created by Tice")
+        	.setMessage("Version 1.1 -- Created by Tice")
         	.create();
         case APPLIST_ID:
-        	if (GetApplications() == true){
+        	if (mReturn == true){
 	            return new AlertDialog.Builder(Poweroff.this)
 	            //.setIcon(R.drawable.ic_popup_reminder)
 	            .setTitle(R.string.app_list)
@@ -221,6 +236,26 @@ public class Poweroff extends Activity {
         }
         return null;
     }
+    
+    final Runnable mTaskGetApplications = new Runnable() {
+        public void run() { 
+        	mReturn = GetApplications();
+            Message message = new Message();
+            message.what = GETAPPLICATIONS_FINISH;
+            mHandler.sendMessage(message);
+        }
+    };
+
+    
+    private final Handler mHandler = new Handler() {
+        @Override
+         public void handleMessage(final Message msg) {
+          if (msg.what == GETAPPLICATIONS_FINISH){
+        	  mProgressdialog.dismiss();
+        	  showDialog(APPLIST_ID);
+          }
+        }
+    };    
     
 	private boolean GetApplications(){
     	
@@ -269,5 +304,13 @@ public class Poweroff extends Activity {
         		mDbHelper.createAppName(mApplist.mTitlelist[i], mApplist.mPackagelist[i],mApplist.mNamelist[i]);
         	}
         }
+	}
+
+	@Override
+	protected void onDestroy() {
+		// TODO Auto-generated method stub
+		super.onDestroy();
+		
+		mDbHelper.close();
 	}
 }
